@@ -40,8 +40,10 @@ func main() {
     }
 
     //白黒に変換する
-  outputImage := convertToMonochromeImage(srcimg); // 変換
+  //outputImage := convertToMonochromeImage(srcimg); // 変換
   
+  //画像をマージする
+  outputImage := convertSynthesisImage(srcimg, addimg);
 
   //fmt.Println("Width:", img.Width, "Height:", img.Height)
 
@@ -152,34 +154,56 @@ func convertSynthesisImage(srcImage image.Image, synthesis image.Image) image.Im
     rect            := srcImage.Bounds()
     width           := rect.Size().X
     height          := rect.Size().Y
-    
-    //Image保存領域作成
     rgba            := image.NewRGBA(rect)
  
     //元画像のサイズ出力
-    fmt.Println("元画像 Width=%d, Height=%d", width, height)
+    fmt.Printf("元画像 Width=%d, Height=%d\n", width, height)
 
     //合成用画像の出力サイズ
-    fmt.Println("合成用画像 Width=%d, Height=%d", synthesis.Bounds().Size().X, synthesis.Bounds().Size().Y)
+    fmt.Printf("合成用画像 Width=%d, Height=%d\n", synthesis.Bounds().Size().X, synthesis.Bounds().Size().Y)
 
+    //座標位置は、左上基準
     for x := 0; x < width; x++ {
         for y := 0; y < height; y++ {
             var col color.RGBA
             // 座標(x,y)のR, G, B, α の値を取得
             r,g,b,a := srcImage.At(x ,y).RGBA()
 
+            //if(synthesis.Bounds().Size().X > x && synthesis.Bounds().Size().Y > y ){
+            //    r,g,b,a = synthesis.At(x ,y).RGBA()
+            //}
             // それぞれを重み付けして足し合わせる(NTSC 系加重平均法)
-            outR := float32(uint8(r)) * 0.298912
-            outG := float32(uint8(g)) * 0.58611
-            outB := float32(uint8(b)) * 0.114478
-            mono := uint8(outR + outG + outB)
-            col.R = mono
-            col.G = mono
-            col.B = mono
+            //outR := float32(uint8(r)) * 0.298912
+            //outG := float32(uint8(g)) * 0.58611
+            //outB := float32(uint8(b)) * 0.114478
+            //mono := uint8(outR + outG + outB)
+            col.R = uint8(r)
+            col.G = uint8(g)
+            col.B = uint8(b)
             col.A = uint8(a)
             rgba.Set(x, y, col)
         }
     }
+
+
+    for x := 0; x < synthesis.Bounds().Size().X  ;x++ {
+        for y := 0; y < synthesis.Bounds().Size().Y ; y++ {
+            var col color.RGBA
+
+            if(synthesis.Bounds().Size().X > x && synthesis.Bounds().Size().Y > y ){
+                r,g,b,a := synthesis.At(x ,y).RGBA()
+                if(a > 1){
+                                 col.R = uint8(r)
+                col.G = uint8(g)
+                col.B = uint8(b)
+                col.A = uint8(a)
+                rgba.Set(x, y, col)   
+                }
+
+            }          
+        }
+    }
+
 
     return rgba.SubImage(rect)
 }
