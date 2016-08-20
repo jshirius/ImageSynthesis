@@ -39,15 +39,16 @@ func main() {
         }
     }
 
-
+    //白黒に変換する
+  outputImage := convertToMonochromeImage(srcimg); // 変換
   
 
   //fmt.Println("Width:", img.Width, "Height:", img.Height)
 
 
 
-
-  saveImage(srcimg)
+  //画像ファイルとして保存する
+  saveImage(outputImage)
 
   // ビルドエラー回避
   var _ = path
@@ -142,3 +143,43 @@ func convertToMonochromeImage(inputImage image.Image) image.Image {
     return rgba.SubImage(rect)
 }
 
+
+// --------------------------------------------------
+// ２つの画像を一つの画像にマージする
+//  synthesisは、srcImageより小さい画像であること
+// --------------------------------------------------
+func convertSynthesisImage(srcImage image.Image, synthesis image.Image) image.Image {
+    rect            := srcImage.Bounds()
+    width           := rect.Size().X
+    height          := rect.Size().Y
+    
+    //Image保存領域作成
+    rgba            := image.NewRGBA(rect)
+ 
+    //元画像のサイズ出力
+    fmt.Println("元画像 Width=%d, Height=%d", width, height)
+
+    //合成用画像の出力サイズ
+    fmt.Println("合成用画像 Width=%d, Height=%d", synthesis.Bounds().Size().X, synthesis.Bounds().Size().Y)
+
+    for x := 0; x < width; x++ {
+        for y := 0; y < height; y++ {
+            var col color.RGBA
+            // 座標(x,y)のR, G, B, α の値を取得
+            r,g,b,a := srcImage.At(x ,y).RGBA()
+
+            // それぞれを重み付けして足し合わせる(NTSC 系加重平均法)
+            outR := float32(uint8(r)) * 0.298912
+            outG := float32(uint8(g)) * 0.58611
+            outB := float32(uint8(b)) * 0.114478
+            mono := uint8(outR + outG + outB)
+            col.R = mono
+            col.G = mono
+            col.B = mono
+            col.A = uint8(a)
+            rgba.Set(x, y, col)
+        }
+    }
+
+    return rgba.SubImage(rect)
+}
