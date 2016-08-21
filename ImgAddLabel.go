@@ -10,10 +10,11 @@ import (
   "fmt"
   "time"
   "image"
-  _"image/jpeg"
-  "image/png"
+  "image/jpeg"
+  _"image/png"
   "image/color"
-
+    "io/ioutil"
+    "path/filepath"
 )
 
 func main() {
@@ -57,7 +58,10 @@ func main() {
   var _ = start
   var _ = srcimg
   var _ = addimg
-  
+ 
+
+//ファイル検索
+listFiles("/Users/takizawa/Pictures/20160807_koiwa_hanabi/", "/Users/takizawa/Pictures/20160807_koiwa_hanabi/") 
 }
 
 
@@ -100,13 +104,14 @@ func getIMG(path string) image.Image {
 
 //画像を保存する
 func saveImage(img image.Image) {
-    out, err := os.Create("output.png")
+    out, err := os.Create("output.jpg")
     defer out.Close()
     if err != nil {
         fmt.Println(err)
         os.Exit(1)
     }
-    err = png.Encode(out, img)
+    option := &jpeg.Options{Quality: 100}
+    err = jpeg.Encode(out, img,option)
     if err != nil {
         fmt.Println(err)
         os.Exit(1)
@@ -206,4 +211,30 @@ func convertSynthesisImage(srcImage image.Image, synthesis image.Image) image.Im
 
 
     return rgba.SubImage(rect)
+}
+
+
+
+func listFiles(rootPath, searchPath string) {
+    fis, err := ioutil.ReadDir(searchPath)
+
+    if err != nil {
+        panic(err)
+    }
+
+    for _, fi := range fis {
+        fullPath := filepath.Join(searchPath, fi.Name())
+
+        if fi.IsDir() {
+            listFiles(rootPath, fullPath)
+        } else {
+            rel, err := filepath.Rel(rootPath, fullPath)
+
+            if err != nil {
+                panic(err)
+            }
+
+            fmt.Println(rel)
+        }
+    }
 }
