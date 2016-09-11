@@ -10,9 +10,11 @@ import (
   "fmt"
   "time"
   "image"
+  "math"
   "image/jpeg"
   _"image/png"
   "image/color"
+  "image/draw"
     "io/ioutil"
     "path/filepath"
 )
@@ -28,30 +30,16 @@ func main() {
     }
 
   srcimg := getIMG(path);
-  addimg := getIMG("photobyhikage.png");
+  addimg := getIMG("photoLabel.png");
 
-
-  for i := 0; i < srcimg.Bounds().Max.Y; i++ {
-        for j := 0; j < srcimg.Bounds().Max.X; j++ {
-            //r, g, b, _ := addimg.At(j, i).RGBA()
-            //srcimg.Set(j, i, addimg.At(j, i))
-            //i := rgb2int(int(r), int(g), int(b))
-            //hist[i]++
-        }
-    }
-
-    //白黒に変換する
-  //outputImage := convertToMonochromeImage(srcimg); // 変換
-  
-  //画像をマージする
-  outputImage := convertSynthesisImage(srcimg, addimg);
-
-  //fmt.Println("Width:", img.Width, "Height:", img.Height)
+//合成処理
+outputImage := convertDrawImage(srcimg, addimg);
 
 
 
   //画像ファイルとして保存する
   saveImage(outputImage)
+//saveBmpImage(outputImage) 
 
   // ビルドエラー回避
   var _ = path
@@ -118,7 +106,6 @@ func saveImage(img image.Image) {
     }
 }
 
-
 // --------------------------------------------------
 // 引数で与えられたイメージをモノクロに変換して返す関数
 // --------------------------------------------------
@@ -150,6 +137,43 @@ func convertToMonochromeImage(inputImage image.Image) image.Image {
     return rgba.SubImage(rect)
 }
 
+// --------------------------------------------------
+// ２つの画像を一つの画像にマージする
+//  synthesisは、srcImageより小さい画像であること
+// --------------------------------------------------
+func convertDrawImage(srcImage image.Image, synthesis image.Image) image.Image {
+
+
+    rect            := srcImage.Bounds()
+    width           := rect.Size().X
+    height          := rect.Size().Y
+    rgba            := image.NewRGBA(rect)
+ 
+    //imageをコピーする
+    for x := 0; x < width; x++ {
+        for y := 0; y < height; y++ {
+             rgba.Set(x, y, srcImage.At(x, y))
+        }
+    }
+
+    fmt.Printf("元画像の大きさ=%s", srcImage.Bounds())
+    fmt.Printf("合成画像の大きさ=%s", synthesis.Bounds())
+
+    //貼り付け位置調整
+    var mergin int
+    mergin = 20
+    a := image.Pt((-1)*(srcImage.Bounds().Max.X -  synthesis.Bounds().Max.X - mergin),
+        (-1)*(srcImage.Bounds().Max.Y -  synthesis.Bounds().Max.Y - mergin))
+    //synRect.Max.X = 1200;
+
+    //合成処理
+    draw.Draw(rgba, rect, synthesis, a, draw.Over)
+
+    return rgba
+}
+
+
+
 
 // --------------------------------------------------
 // ２つの画像を一つの画像にマージする
@@ -166,6 +190,10 @@ func convertSynthesisImage(srcImage image.Image, synthesis image.Image) image.Im
 
     //合成用画像の出力サイズ
     fmt.Printf("合成用画像 Width=%d, Height=%d\n", synthesis.Bounds().Size().X, synthesis.Bounds().Size().Y)
+
+
+
+
 
     //座標位置は、左上基準
     for x := 0; x < width; x++ {
@@ -191,20 +219,59 @@ func convertSynthesisImage(srcImage image.Image, synthesis image.Image) image.Im
     }
 
 
-    for x := 0; x < synthesis.Bounds().Size().X  ;x++ {
-        for y := 0; y < synthesis.Bounds().Size().Y ; y++ {
+    for x := 0; x < srcImage.Bounds().Size().X  ;x++ {
+        for y := 0; y < srcImage.Bounds().Size().Y ; y++ {
             var col color.RGBA
+
 
             if(synthesis.Bounds().Size().X > x && synthesis.Bounds().Size().Y > y ){
                 r,g,b,a := synthesis.At(x ,y).RGBA()
-                if(a > 1){
-                                 col.R = uint8(r)
-                col.G = uint8(g)
-                col.B = uint8(b)
-                col.A = uint8(a)
-                rgba.Set(x, y, col)   
-                }
+                //fmt.Printf("a =%d\n",uint8(a))
+  //　『dest = src * (alpha / 255) + dest * (1 - (alpha / 255));』
+              
+                if(uint8(a) == 0){
+                    //fmt.Printf("a =%X\n",a)
+                      col.R = uint8(255)
+                    col.G = uint8(255)
+                    col.B = uint8(255)
+                    col.A = uint8(255)
+                    /*
+                    col.R = uint8(r)
+                    col.G = uint8(g)
+                    col.B = uint8(b)
+                    col.A = uint8(a)
+                    rgba.Set(x, y, col)   
 
+*/
+                }else{
+                    /*
+                      col.R = uint8(r)
+                    col.G = uint8(g)
+                    col.B = uint8(b)
+                    col.A = uint8(a)
+                    rgba.Set(x, y, col)   
+*/
+
+                    
+                    r2,g2,b2,_ := srcImage.At(x ,y).RGBA()
+                    fmt.Printf("a =%d\n",r2)
+
+                    //fmt.Printf("b =%X\n", math.MaxUint32);
+                    r = r2 * (a/ (math.MaxUint32)) + r * (1- (a/ (math.MaxUint32)) )
+                    g = g2 * (a/ (math.MaxUint32)) + g * (1- (a/ (math.MaxUint32)) )
+                    b = b2 * (a/ (math.MaxUint32)) + b * (1- (a/ (math.MaxUint32)) )
+                    //outR := float32(uint8(r)) * float32(uint8(a)) / 255 +  float32(r * (1 - float32(uint8(a))/255)
+                    //outG := float32(uint8(g)) *  float32(uint8(g2)) 
+                    //outB := float32(uint8(b)) *  float32(uint8(b2)) 
+
+                    col.R = uint8(r)
+                    col.G = uint8(g)
+                    col.B = uint8(b)
+                    col.A = uint8(255)
+                    rgba.Set(x, y, col)   
+                    
+                }
+                
             }          
         }
     }
