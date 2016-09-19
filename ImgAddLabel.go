@@ -8,7 +8,7 @@ package main
 import (
   "os"
   "fmt"
-  "time"
+//  "time"
   "image"
   "image/jpeg"
   _"image/png"
@@ -17,40 +17,43 @@ import (
     "path/filepath"
 )
 
+var srcRootPath string = ""
+var lablePath  string = ""
+
 func main() {
-    path := ""
-    start := time.Now()
-    if len(os.Args) >= 2 {
-        path = os.Args[1]
+
+    //start := time.Now()
+    if len(os.Args) >= 3 {
+        //合成対象の画像を入っているディレクトリRoot
+        srcRootPath = os.Args[1]
+
+        //ラベル画像
+        lablePath= os.Args[2]
+
     } else {
-        fmt.Println("コマンドライン引数に画像ファイルを指定してください")
+        fmt.Println("コマンドライン引数に画像のRoot,合成画像を指定してください")
         return
     }
 
-  srcimg := getIMG(path);
-  addimg := getIMG("photoLabel.png");
-
-//合成処理
-outputImage := convertDrawImage(srcimg, addimg);
+    //メイン処理
+    fmt.Println("合成対象のルートディレクトリ " + srcRootPath)
+    listFiles(srcRootPath, srcRootPath) 
 
 
 
-  //画像ファイルとして保存する
-  saveImage(outputImage)
-//saveBmpImage(outputImage) 
-
-  // ビルドエラー回避
-  var _ = path
-  var _ = start
-  var _ = srcimg
-  var _ = addimg
- 
-
-//ファイル検索
-listFiles("/Users/takizawa/Pictures/20160807_koiwa_hanabi/", "/Users/takizawa/Pictures/20160807_koiwa_hanabi/") 
 }
 
+//画像作成
+func convertImage(imgPath string){
+    srcimg := getIMG(imgPath);
+    addimg := getIMG(lablePath);
 
+    //合成処理
+    outputImage := convertDrawImage(srcimg, addimg);
+
+    //画像ファイルとして保存する
+    saveImage(outputImage, imgPath)
+}
 
 //画像を読み込む
 func getIMG(path string) image.Image {
@@ -89,8 +92,8 @@ func getIMG(path string) image.Image {
 }
 
 //画像を保存する
-func saveImage(img image.Image) {
-    out, err := os.Create("output.jpg")
+func saveImage(img image.Image, outPath string) {
+    out, err := os.Create(outPath)
     defer out.Close()
     if err != nil {
         fmt.Println(err)
@@ -141,10 +144,6 @@ func convertDrawImage(srcImage image.Image, synthesis image.Image) image.Image {
 }
 
 
-
-
-
-
 func listFiles(rootPath, searchPath string) {
     fis, err := ioutil.ReadDir(searchPath)
 
@@ -164,7 +163,16 @@ func listFiles(rootPath, searchPath string) {
                 panic(err)
             }
 
-            fmt.Println(rel)
+        
+            matched , _ := filepath.Match("*.jpg", rel)
+            if matched == true {
+                rel = rootPath  + "/"+rel
+                fmt.Println(rel)    
+                convertImage(rel)        
+            }
+
         }
     }
 }
+
+
